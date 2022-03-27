@@ -1,6 +1,9 @@
 from turtle import *
 import random
 import math
+
+
+r = 30
 def textintoGraph(file):
     graph = []
     with open(file) as f:
@@ -65,18 +68,17 @@ def GenerateCordsforNodes(cords,points):
 def drawnodes(nodes,points):
     for i in range(nodes):
         penup()
-        goto(points[i][0]-2,points[i][1]+8)
+        goto(points[i][0]-2,points[i][1]+r-8)
         pendown()
         write(i)
         penup()
         goto(points[i][0],points[i][1])
         pendown()
-        circle(15)
+        circle(r)
 
 
 # PROBLEMS WHEN TOO CLOSE TO X,Y axis intersections of the circle. BECAUSE OF REVERSING SIDES LINE GOES THROUGH THE NODE 
 def drawconnectionlines(points,graph,offset,add,distances):
-    r = 15
     nodeint = 0
     i = 0
     for node in graph:
@@ -91,7 +93,6 @@ def drawconnectionlines(points,graph,offset,add,distances):
                 angle = math.atan2(points[i][1]+r - points[nodeint][1]+r, points[i][0] - points[nodeint][0])*(180/math.pi)
                 xoncircle = r*math.sin(angle+offset)
                 yoncircle = r*math.cos(angle+offset)
-                print(angle)
                 xpoint1= 0
                 xpoint2= 0
                 ypoint1= 0
@@ -115,7 +116,12 @@ def drawconnectionlines(points,graph,offset,add,distances):
                 write(dist)
                 goto(point2)
                 pendown()
+                # goto(point1)
+                goto(point1[0],point1[1]+4)
+                begin_fill()
                 goto(point1)
+                circle(4)
+                end_fill()
             i+=1
         i=0
         nodeint+=1
@@ -124,5 +130,5 @@ distances = textintoGraph('dist.txt')
 points = GenerateCordsforNodes(randomCords(),points)
 drawnodes(nodes,points)
 drawconnectionlines(points,graph,0,False,distances)
-drawconnectionlines(points,distances,5,True,graph)
+drawconnectionlines(points,distances,40,True,graph)
 done()
