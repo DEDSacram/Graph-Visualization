@@ -67,14 +67,18 @@ def GenerateCordsforNodes(cords,points):
     return points
 def drawnodes(nodes,points):
     for i in range(nodes):
+        color('black')
+        goto(points[i][0],points[i][1])
+        pendown()
+        fillcolor('white')
+        begin_fill()
+        circle(r)
+        end_fill()
         penup()
         goto(points[i][0]-5,points[i][1]+r-16)
         pendown()
         write(i, font=("Arial", 16, "normal"))
         penup()
-        goto(points[i][0],points[i][1])
-        pendown()
-        circle(r)
 
 
 # PROBLEMS WHEN TOO CLOSE TO X,Y axis intersections of the circle. BECAUSE OF REVERSING SIDES LINE GOES THROUGH THE NODE 
@@ -93,22 +97,22 @@ def drawconnectionlines(points,graph,offset,add,distances):
                 angle = math.atan2(points[i][1]+r - points[nodeint][1]+r, points[i][0] - points[nodeint][0])*(180/math.pi)
                 xoncircle = r*math.sin(angle+offset)
                 yoncircle = r*math.cos(angle+offset)
-                xpoint1= 0
-                xpoint2= 0
-                ypoint1= 0
-                ypoint2= 0
-                if points[nodeint][0] > points[i][0]:
-                    xpoint2 = points[nodeint][0]+xoncircle
-                    xpoint1 = points[i][0]-xoncircle
-                else:
-                    xpoint2 = points[nodeint][0]-xoncircle
-                    xpoint1 = points[i][0]+xoncircle
-                if points[nodeint][1] > points[i][1]:
-                    ypoint2=points[nodeint][1]+r-yoncircle
-                    ypoint1=points[i][1]+r+yoncircle
-                else: 
-                    ypoint2=points[nodeint][1]+r+yoncircle
-                    ypoint1=points[i][1]+r-yoncircle
+                xpoint1= points[i][0]+xoncircle
+                xpoint2= points[nodeint][0]+xoncircle
+                ypoint1= points[i][1]+r+yoncircle
+                ypoint2= points[nodeint][1]+r+yoncircle
+                # if points[nodeint][0] > points[i][0]:
+                #     xpoint2 = points[nodeint][0]+xoncircle
+                #     xpoint1 = points[i][0]-xoncircle
+                # else:
+                #     xpoint2 = points[nodeint][0]-xoncircle
+                #     xpoint1 = points[i][0]+xoncircle
+                # if points[nodeint][1] > points[i][1]:
+                #     ypoint2=points[nodeint][1]+r-yoncircle
+                #     ypoint1=points[i][1]+r+yoncircle
+                # else: 
+                #     ypoint2=points[nodeint][1]+r+yoncircle
+                #     ypoint1=points[i][1]+r-yoncircle
                 point2 = (xpoint2, ypoint2)
                 point1 = (xpoint1, ypoint1)
                 penup()
@@ -116,10 +120,10 @@ def drawconnectionlines(points,graph,offset,add,distances):
                 write(dist, font=("Arial", 8, "normal"))
                 goto(point2)
                 pendown()
-                goto(point1[0],point1[1]+4)
+                goto(point1[0],point1[1]+15)
                 begin_fill()
                 goto(point1)
-                circle(4)
+                circle(15)
                 end_fill()
             i+=1
         i=0
@@ -127,7 +131,7 @@ def drawconnectionlines(points,graph,offset,add,distances):
 floydWarshall(graph)
 distances = textintoGraph('dist.txt')
 points = GenerateCordsforNodes(randomCords(),points)
-drawnodes(nodes,points)
 drawconnectionlines(points,graph,0,False,distances)
 drawconnectionlines(points,distances,15,True,graph)
+drawnodes(nodes,points)
 done()
