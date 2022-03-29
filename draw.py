@@ -1,21 +1,41 @@
+import this
 from turtle import *
 import random
 import math
+from xml.dom.minicompat import NodeList
 import cv2
 from cv2 import line
 import numpy as np
 import os
 
+class Node:
+
+        # declare and initialize an instance variable
+    def __init__(self):
+        self.connectedto = []
+    position= []
+    size = []
+    outercircle = []
+    # connectedto = []
+    value = ""
+
+    def add(self,content):
+        self.connectedto.append(content)
+
+class Edge:
+    position= []
+    size = []
+    value = ""
+
+
 r = 30
 basedir = "data/images/"
 images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png","sus.png","garbage.jpeg"] # to be changed
-imagepath = basedir + "Cool.png"
+imagepath = basedir + "pog.png"
 def detectlines(image):
     img = cv2.imread(image)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     kernel_size = 3
-  
- 
     low_threshold = 50
     high_threshold = 150
     edges = cv2.Canny(gray, low_threshold, high_threshold)
@@ -40,12 +60,13 @@ def detectlines(image):
     return contours
 
 def imageintoGraph(path):
-    os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
+    # os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
     prefix = "../"
     cords = [] # all detections
-    centercords = [] # all detections
-    nodes = []
-    edges = []
+    nodelist = []
+    edgelist = []
+
+
     linestopbot=[]
     linecenter=[]
     lineedges = detectlines(prefix+path) # line Contours
@@ -59,28 +80,35 @@ def imageintoGraph(path):
         for x in lines:
             x = x.rstrip() 
             cords.append([int(float(i)) for i in x.split(',')])
+  
     for cord in cords:
+        node = Node()
+        edge = Edge()
         width = (cord[2]-cord[0])
         height = (cord[1]-cord[3])
         centerx = cord[0] + int(width/2)
         centery = cord[1] - int(height/2)
-        centercords.append([centerx,centery])
-    # Check if in circle then append
-    for cord in centercords:
         isin = False
         for i in circles[0]:
             if((math.pow((cord[0] - i[0]), 2) + math.pow((cord[1] - i[1]), 2)) < math.pow(i[2],2)):
                         isin = True
+                        node.outercircle = [i[0],i[1],i[2]]
             cv2.circle(planets,(i[0],i[1]),i[2],(0,128,64),6)
+       
         if isin:
-            nodes.append([cord[0],cord[1]])
+            node.position = [cord[0],cord[1],cord[2],cord[3],centerx,centery]
+            node.size = [width,height]
+            nodelist.append(node)
+            cv2.circle(planets,(centerx,centery),20,(0,128,0),3)
         else:
-            edges.append([cord[0],cord[1]])
-    for a in nodes:
-         cv2.circle(planets,(a[0],a[1]),20,(0,0,255),3)
-    for b in edges:
-         cv2.circle(planets,(b[0],b[1]),20,(255,0,128),3)
+            edge = Edge()
+            edge.position = [cord[0],cord[1],cord[2],cord[3],centerx,centery]
+            edge.size = [width,height]
+            edgelist.append(edge)
+            cv2.circle(planets,(centerx,centery),20,(0,0,255),3)
     
+
+
     cv2.drawContours(planets, lineedges,-1, (0,255,0), 3)
     for crt in lineedges:
         leftmost = tuple(crt[crt[:,:,0].argmin()][0])
@@ -93,13 +121,27 @@ def imageintoGraph(path):
         cv2.circle(planets,(rightmost[0],rightmost[1]),4,(64,64,64),6)
         cv2.circle(planets,(leftmost[0],leftmost[1]),4,(0,0,256),6)
         cv2.circle(planets,(int((rightmost[0]+leftmost[0])/2),int((rightmost[1]+leftmost[1])/2)),4,(128,64,0),6)
-        linestopbot.append([[leftmost[0],leftmost[1],rightmost[0],rightmost[1]]])
+        linestopbot.append([leftmost[0],leftmost[1],rightmost[0],rightmost[1]])
         linecenter.append(center)
 
+    for line in linestopbot:
+        
+        for node in nodelist:
+            x1 = node.outercircle[0] - node.outercircle[2]-20
+            x2 = node.outercircle[0] + node.outercircle[2]+20
+            y1 = node.outercircle[1] + node.outercircle[2]+20
+            y2 = node.outercircle[2] - node.outercircle[2]-20
+            if(((line[0]>x1 and line[0]<x2) and (line[1]>y2 and line[1]<y1)) or ((line[2]>x1 and line[2]<x2) and (line[3]>y2 and line[3]<y1))):
+                node.add(line)
     
-    print(linestopbot)
-    print(linecenter)
-        # cv2.drawContours(planets, crt,0, (0,255,0), 8) 
+
+    for node in nodelist:
+        for x1,y1,x2,y2 in node.connectedto:
+            cv2.line(planets, (x1,y1), (x2,y2), (128,64,0), 5)
+    print(nodelist[0].position)
+    print(nodelist[1].connectedto)
+    # print(linestopbot)
+    # print(linecenter)
     cv2.imshow("HoughCirlces",	planets)
     cv2.waitKey()
     # cv2.destroyAllWindows()
