@@ -8,26 +8,57 @@ import os
 r = 30
 basedir = "data/images/"
 images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png"] # to be changed
-def imageintoGraph(path):
-    os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
-    cords = [] # all detections
+imagepath = basedir + images[0]
+def detectlines(image):
+    img = cv2.imread(image)
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    kernel_size = 5
+    blur_gray = cv2.GaussianBlur(gray,(kernel_size, kernel_size),0)
+    low_threshold = 50
+    high_threshold = 150
+    edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
+    rho = 1  # distance resolution in pixels of the Hough grid
+    theta = np.pi / 180  # angular resolution in radians of the Hough grid
+    # threshold = 15  # minimum number of votes (intersections in Hough grid cell)
+    threshold = 2
+    min_line_length = 50  # minimum number of pixels making up a line
+    max_line_gap = 5  # maximum gap in pixels between connectable line segments
+    line_image = np.copy(img) * 0  # creating a blank to draw lines on
 
-    centercords = []
+   
+    # Output "lines" is an array containing endpoints of detected line segments
+    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
+                        min_line_length, max_line_gap)
+    # points = []
+    for line in lines:
+        for x1,y1,x2,y2 in line:
+            # points.append(((x1 + 0.0, y1 + 0.0), (x2 + 0.0, y2 + 0.0)))
+            cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+       
+
+    return lines
+
+def imageintoGraph(path):
+    # os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
+
+    prefix = "../"
+
+    cords = [] # all detections
+    centercords = [] # all detections
+
     nodes = []
     edges = []
+    lineedges = detectlines(prefix+path) # lines estimate
 
-    planets	= cv2.imread("../"+path)
+    planets	= cv2.imread(prefix+path)
     gray_img=cv2.cvtColor(planets,	cv2.COLOR_BGR2GRAY)
     img	= cv2.medianBlur(gray_img,	1)
-    # cimg = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+    print(lineedges)
     
-    #center
-    # cv2.imshow("HoughCirlces",	img)
-    # cv2.waitKey()
     circles	= cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,30,param1=100,param2=30,minRadius=20,maxRadius=120)
     circles	= np.uint16(np.around(circles))
 
-
+  
     with open("alldetections.txt") as f:
         lines = f.readlines()
         for x in lines:
@@ -41,13 +72,8 @@ def imageintoGraph(path):
         centery = cord[1] - int(height/2)
      
         centercords.append([centerx,centery])
-
     # (x - center_x)² + (y - center_y)² < radius²
-
-    print(circles)
-    # for	i in circles[0,:]:
-                    
-                    
+    # for	i in circles[0,:]:         
     #                 for cord in centercords:
     #                     if((math.pow((cord[0] - i[0]), 2) + math.pow((cord[1] - i[1]), 2)) < math.pow(i[2],2)):
     #                         # print(True)
@@ -56,15 +82,14 @@ def imageintoGraph(path):
     #                         # print(False)
     #                         if [cord[0],cord[1]] not in edges:
     #                             edges.append([cord[0],cord[1]])
-
-                             
-                                
-
     #                 #	draw	the	outer	circle
     #                 cv2.circle(planets,(i[0],i[1]),i[2],(0,128,255),6)
     #                 # #	draw	the	center	of	the	circle
     #                 # cv2.circle(planets,(i[0],i[1]),2,(0,0,255),3)
 
+
+
+    # Check if in circle then append
     for cord in centercords:
         isin = False
         for i in circles[0]:
@@ -76,20 +101,15 @@ def imageintoGraph(path):
         else:
             edges.append([cord[0],cord[1]])
 
-                    
-   
-  
+    # Draw
     for a in nodes:
-         cv2.circle(planets,(a[0],a[1]),20,(0,255,0),3)
+         cv2.circle(planets,(a[0],a[1]),20,(random.randint(0, 255),random.randint(0, 255),random.randint(0, 255)),3)
     for b in edges:
          cv2.circle(planets,(b[0],b[1]),20,(255,0,128),3)
-
-
- 
-            
-   
-  
-   
+    for line in lineedges:
+        for x1,y1,x2,y2 in line:
+            # points.append(((x1 + 0.0, y1 + 0.0), (x2 + 0.0, y2 + 0.0)))
+            cv2.line(planets,(x1,y1),(x2,y2),(255,0,0),5)
     cv2.imshow("HoughCirlces",	planets)
     cv2.waitKey()
     # cv2.destroyAllWindows()
@@ -103,6 +123,7 @@ def textintoGraph(file):
             graph.append([int(i) for i in x.split(',')])
 
         return graph
+
 def graphintoText(graph):
     with open('dist.txt', 'w') as f:
         for node in graph:
@@ -110,6 +131,7 @@ def graphintoText(graph):
             f.write('\n')
 graph = textintoGraph('graph.txt')
 nodes = len(graph)
+
 def floydWarshall(graph):
     dist = list(map(lambda i: list(map(lambda j: j, i)), graph))
     for k in range(nodes):
@@ -126,6 +148,8 @@ def floydWarshall(graph):
                                  )
     graphintoText(dist)
     return dist
+
+
 WIDTH, HEIGHT = 1980, 1080
 screen = Screen()
 screen.setup(WIDTH + 4, HEIGHT + 8)  # fudge factors due to window borders & title bar
@@ -217,7 +241,7 @@ def drawconnectionlines(points,graph,offset,add,distances):
 
 
 
-imageintoGraph(basedir + "Cool.png")
+imageintoGraph(imagepath)
 floydWarshall(graph)
 distances = textintoGraph('dist.txt')
 points = GenerateCordsforNodes(randomCords(),points)
