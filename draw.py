@@ -9,7 +9,13 @@ r = 30
 basedir = "data/images/"
 images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png"] # to be changed
 def imageintoGraph(path):
+    os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
     cords = [] # all detections
+
+    centercords = []
+    nodes = []
+    edges = []
+
     planets	= cv2.imread("../"+path)
     gray_img=cv2.cvtColor(planets,	cv2.COLOR_BGR2GRAY)
     img	= cv2.medianBlur(gray_img,	1)
@@ -20,15 +26,6 @@ def imageintoGraph(path):
     # cv2.waitKey()
     circles	= cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,30,param1=100,param2=30,minRadius=20,maxRadius=120)
     circles	= np.uint16(np.around(circles))
-    
-    for	i in circles[0,:]:
-                    #	draw	the	outer	circle
-                    cv2.circle(planets,(i[0],i[1]),i[2],(0,255,0),6)
-                    #	draw	the	center	of	the	circle
-                    cv2.circle(planets,(i[0],i[1]),2,(0,0,255),3)
-                    
-   
-       
 
 
     with open("alldetections.txt") as f:
@@ -37,15 +34,61 @@ def imageintoGraph(path):
             x = x.rstrip() 
             cords.append([int(float(i)) for i in x.split(',')])
 
-
-
     for cord in cords:
-        centerx = cord[0] + int((cord[2]-cord[0])/2)
-        centery = cord[1] - int((cord[1]-cord[3])/2)
-        cv2.circle(planets,(centerx,centery),20,(0,0,255),3)
+        width = (cord[2]-cord[0])
+        height = (cord[1]-cord[3])
+        centerx = cord[0] + int(width/2)
+        centery = cord[1] - int(height/2)
+     
+        centercords.append([centerx,centery])
+
+    # (x - center_x)² + (y - center_y)² < radius²
+
+    print(circles)
+    # for	i in circles[0,:]:
+                    
+                    
+    #                 for cord in centercords:
+    #                     if((math.pow((cord[0] - i[0]), 2) + math.pow((cord[1] - i[1]), 2)) < math.pow(i[2],2)):
+    #                         # print(True)
+    #                         nodes.append([cord[0],cord[1]])
+    #                     else:
+    #                         # print(False)
+    #                         if [cord[0],cord[1]] not in edges:
+    #                             edges.append([cord[0],cord[1]])
+
+                             
+                                
+
+    #                 #	draw	the	outer	circle
+    #                 cv2.circle(planets,(i[0],i[1]),i[2],(0,128,255),6)
+    #                 # #	draw	the	center	of	the	circle
+    #                 # cv2.circle(planets,(i[0],i[1]),2,(0,0,255),3)
+
+    for cord in centercords:
+        isin = False
+        for i in circles[0]:
+            if((math.pow((cord[0] - i[0]), 2) + math.pow((cord[1] - i[1]), 2)) < math.pow(i[2],2)):
+                        isin = True
+            cv2.circle(planets,(i[0],i[1]),i[2],(0,128,64),6)
+        if isin:
+            nodes.append([cord[0],cord[1]])
+        else:
+            edges.append([cord[0],cord[1]])
+
+                    
+   
+  
+    for a in nodes:
+         cv2.circle(planets,(a[0],a[1]),20,(0,255,0),3)
+    for b in edges:
+         cv2.circle(planets,(b[0],b[1]),20,(255,0,128),3)
+
+
+ 
             
    
-    os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
+  
    
     cv2.imshow("HoughCirlces",	planets)
     cv2.waitKey()
@@ -174,7 +217,7 @@ def drawconnectionlines(points,graph,offset,add,distances):
 
 
 
-imageintoGraph(basedir + "pepeppo.png")
+imageintoGraph(basedir + "Cool.png")
 floydWarshall(graph)
 distances = textintoGraph('dist.txt')
 points = GenerateCordsforNodes(randomCords(),points)
