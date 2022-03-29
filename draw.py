@@ -2,41 +2,66 @@ from turtle import *
 import random
 import math
 import cv2
+from cv2 import line
 import numpy as np
 import os
 
 r = 30
 basedir = "data/images/"
-images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png"] # to be changed
-imagepath = basedir + images[0]
+images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png","sus.png","garbage.jpeg"] # to be changed
+imagepath = basedir + "pog.png"
+
+
+
 def detectlines(image):
     img = cv2.imread(image)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    kernel_size = 5
-    blur_gray = cv2.GaussianBlur(gray,(kernel_size, kernel_size),0)
+    kernel_size = 3
+  
+ 
     low_threshold = 50
     high_threshold = 150
-    edges = cv2.Canny(blur_gray, low_threshold, high_threshold)
+    edges = cv2.Canny(gray, low_threshold, high_threshold)
     rho = 1  # distance resolution in pixels of the Hough grid
     theta = np.pi / 180  # angular resolution in radians of the Hough grid
     # threshold = 15  # minimum number of votes (intersections in Hough grid cell)
-    threshold = 2
-    min_line_length = 50  # minimum number of pixels making up a line
-    max_line_gap = 5  # maximum gap in pixels between connectable line segments
+    threshold = 15
+    min_line_length = 60  # minimum number of pixels making up a line
+    max_line_gap = 12  # maximum gap in pixels between connectable line segments
     line_image = np.copy(img) * 0  # creating a blank to draw lines on
-
-   
     # Output "lines" is an array containing endpoints of detected line segments
     lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
                         min_line_length, max_line_gap)
-    # points = []
+
     for line in lines:
         for x1,y1,x2,y2 in line:
-            # points.append(((x1 + 0.0, y1 + 0.0), (x2 + 0.0, y2 + 0.0)))
             cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-       
+  
+    # blur_gray = cv2.GaussianBlur(line_image,(kernel_size, kernel_size),1)
 
-    return lines
+
+    img_erosion = cv2.erode(line_image, (kernel_size, kernel_size), iterations=1)
+    edges = cv2.Canny(img_erosion, low_threshold, high_threshold)
+    
+
+    # mask_image = np.copy(img) * 0
+
+    contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    # print(len(contours))
+    # cv2.drawContours(mask_image, contours, -1, (0,255,0), 3)
+    # cv2.imshow("HoughCirlces",	mask_image)
+    # cv2.waitKey()
+   
+    # print(len(contours))
+    # cv2.imshow("HoughCirlces",mask_image)
+    # cv2.waitKey()
+    # # points = []
+    # for line in lines:
+    #     for x1,y1,x2,y2 in line:
+    #         # points.append(((x1 + 0.0, y1 + 0.0), (x2 + 0.0, y2 + 0.0)))
+    #         cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+    return contours
 
 def imageintoGraph(path):
     # os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
@@ -48,12 +73,13 @@ def imageintoGraph(path):
 
     nodes = []
     edges = []
-    lineedges = detectlines(prefix+path) # lines estimate
 
+    lineedges = detectlines(prefix+path) # line Contours
+   
     planets	= cv2.imread(prefix+path)
     gray_img=cv2.cvtColor(planets,	cv2.COLOR_BGR2GRAY)
     img	= cv2.medianBlur(gray_img,	1)
-    print(lineedges)
+   
     
     circles	= cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,30,param1=100,param2=30,minRadius=20,maxRadius=120)
     circles	= np.uint16(np.around(circles))
@@ -102,14 +128,25 @@ def imageintoGraph(path):
             edges.append([cord[0],cord[1]])
 
     # Draw
+    # (random.randint(0, 255),random.randint(0, 255),random.randint(0, 255))
     for a in nodes:
-         cv2.circle(planets,(a[0],a[1]),20,(random.randint(0, 255),random.randint(0, 255),random.randint(0, 255)),3)
+         cv2.circle(planets,(a[0],a[1]),20,(0,0,255),3)
     for b in edges:
          cv2.circle(planets,(b[0],b[1]),20,(255,0,128),3)
-    for line in lineedges:
-        for x1,y1,x2,y2 in line:
-            # points.append(((x1 + 0.0, y1 + 0.0), (x2 + 0.0, y2 + 0.0)))
-            cv2.line(planets,(x1,y1),(x2,y2),(255,0,0),5)
+    
+    for crt in lineedges:
+        leftmost = tuple(crt[crt[:,:,0].argmin()][0])
+        rightmost = tuple(crt[crt[:,:,0].argmax()][0])
+        # topmost = tuple(crt[crt[:,:,1].argmin()][0])
+        # bottommost = tuple(crt[crt[:,:,1].argmax()][0])
+        # cv2.circle(planets,(topmost[0],topmost[1]),10,(0,128,64),6)
+        # cv2.circle(planets,(bottommost[0],bottommost[1]),10,(0,256,64),6)
+        cv2.circle(planets,(rightmost[0],rightmost[1]),10,(256,0,64),6)
+        cv2.circle(planets,(leftmost[0],leftmost[1]),10,(0,0,256),6)
+
+        cv2.drawContours(planets, lineedges,-1, (0,255,0), 3)
+        # cv2.drawContours(planets, crt,0, (0,255,0), 8)
+    
     cv2.imshow("HoughCirlces",	planets)
     cv2.waitKey()
     # cv2.destroyAllWindows()

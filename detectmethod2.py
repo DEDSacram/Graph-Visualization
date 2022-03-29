@@ -34,6 +34,7 @@ lines_edges = cv2.addWeighted(img, 1, line_image, 1, 0)
 
 
 
+
 # print(lines_edges.shape)
-cv2.imshow("HoughCirlces",	line_image)
+cv2.imshow("HoughCirlces",	cv2.addWeighted(img, 1, line_image, 1, 0))
 cv2.waitKey()
