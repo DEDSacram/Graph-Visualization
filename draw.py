@@ -1,9 +1,56 @@
 from turtle import *
 import random
 import math
-
+import cv2
+import numpy as np
+import os
 
 r = 30
+basedir = "data/images/"
+images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png"] # to be changed
+def imageintoGraph(path):
+    cords = [] # all detections
+    planets	= cv2.imread("../"+path)
+    gray_img=cv2.cvtColor(planets,	cv2.COLOR_BGR2GRAY)
+    img	= cv2.medianBlur(gray_img,	1)
+    # cimg = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+    
+    #center
+    # cv2.imshow("HoughCirlces",	img)
+    # cv2.waitKey()
+    circles	= cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,30,param1=100,param2=30,minRadius=20,maxRadius=120)
+    circles	= np.uint16(np.around(circles))
+    
+    for	i in circles[0,:]:
+                    #	draw	the	outer	circle
+                    cv2.circle(planets,(i[0],i[1]),i[2],(0,255,0),6)
+                    #	draw	the	center	of	the	circle
+                    cv2.circle(planets,(i[0],i[1]),2,(0,0,255),3)
+                    
+   
+       
+
+
+    with open("alldetections.txt") as f:
+        lines = f.readlines()
+        for x in lines:
+            x = x.rstrip() 
+            cords.append([int(float(i)) for i in x.split(',')])
+
+
+
+    for cord in cords:
+        centerx = cord[0] + int((cord[2]-cord[0])/2)
+        centery = cord[1] - int((cord[1]-cord[3])/2)
+        cv2.circle(planets,(centerx,centery),20,(0,0,255),3)
+            
+   
+    os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
+   
+    cv2.imshow("HoughCirlces",	planets)
+    cv2.waitKey()
+    # cv2.destroyAllWindows()
+
 def textintoGraph(file):
     graph = []
     with open(file) as f:
@@ -124,6 +171,10 @@ def drawconnectionlines(points,graph,offset,add,distances):
             i+=1
         i=0
         nodeint+=1
+
+
+
+imageintoGraph(basedir + "pepeppo.png")
 floydWarshall(graph)
 distances = textintoGraph('dist.txt')
 points = GenerateCordsforNodes(randomCords(),points)
