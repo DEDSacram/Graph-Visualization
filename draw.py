@@ -13,6 +13,7 @@ class Node:
         # declare and initialize an instance variable
     def __init__(self):
         self.connectedto = []
+        self.connectedtonodes = []
     position= []
     size = []
     outercircle = []
@@ -21,6 +22,8 @@ class Node:
 
     def add(self,content):
         self.connectedto.append(content)
+    def addnode(self,node):
+        self.connectedtonodes.append(node)
 
 class Edge:
     position= []
@@ -136,10 +139,18 @@ def imageintoGraph(path):
     
 
     for node in nodelist:
-        for x1,y1,x2,y2 in node.connectedto:
-            cv2.line(planets, (x1,y1), (x2,y2), (128,64,0), 5)
+        for node2 in nodelist:
+            for connection in node2.connectedto:
+                if connection in node.connectedto and node2 != node:
+                    node.addnode(node2)
     print(nodelist[0].position)
-    print(nodelist[1].connectedto)
+    print(nodelist[0].connectedtonodes)
+
+           
+            
+     
+
+
     # print(linestopbot)
     # print(linecenter)
     cv2.imshow("HoughCirlces",	planets)
