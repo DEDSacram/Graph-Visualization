@@ -7,6 +7,9 @@ import cv2
 from cv2 import line
 import numpy as np
 import os
+import re
+
+import easyocr
 
 class Node:
 
@@ -35,6 +38,7 @@ r = 30
 basedir = "data/images/"
 images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png","sus.png","garbage.jpeg"] # to be changed
 imagepath = basedir + "pepeppo.png"
+prefix = "../"
 def detectlines(image):
     img = cv2.imread(image)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -64,21 +68,31 @@ def detectlines(image):
 
 def imageintoGraph(path):
     # os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
-    prefix = "../"
     cords = [] # all detections
 
     nodelist = []
     edgelist = []
 
+    reader = easyocr.Reader(['en'],gpu=True)
 
     linestopbot=[]
     linecenter=[]
     lineedges = detectlines(prefix+path) # line Contours
     planets	= cv2.imread(prefix+path)
+    original = planets.copy()
     gray_img=cv2.cvtColor(planets,	cv2.COLOR_BGR2GRAY)
     img	= cv2.medianBlur(gray_img,	1)
     circles	= cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,30,param1=100,param2=30,minRadius=20,maxRadius=120)
     circles	= np.uint16(np.around(circles))
+   
+  
+
+
+
+    # reader = easyocr.Reader(['ch_sim','en']) # this needs to run only once to load the model into memory
+    # result = reader.readtext(prefix+path)
+    # print (result)
+    
     with open("alldetections.txt") as f:
         lines = f.readlines()
         for x in lines:
@@ -98,16 +112,26 @@ def imageintoGraph(path):
                         isin = True
                         node.outercircle = [i[0],i[1],i[2]]
             cv2.circle(planets,(i[0],i[1]),i[2],(0,128,64),6)
-       
+
+      
+     
         if isin:
+            crop_img = original[cord[1]:cord[3], cord[0]:cord[2]]
+            results = reader.recognize(crop_img)
+          
             node.position = [cord[0],cord[1],cord[2],cord[3],centerx,centery]
             node.size = [width,height]
+            node.value= results[0][1]
             nodelist.append(node)
             cv2.circle(planets,(centerx,centery),20,(0,128,0),3)
         else:
+            crop_img = original[cord[1]+1:cord[3]+1, cord[0]+1:cord[2]+1]
+            results = reader.recognize(crop_img)
             edge = Edge()
             edge.position = [cord[0],cord[1],cord[2],cord[3],centerx,centery]
             edge.size = [width,height]
+            # edge.value = re.findall(r'\d+', results[0][1])
+            edge.value = results[0][1]
             edgelist.append(edge)
             cv2.circle(planets,(centerx,centery),20,(0,0,255),3)
     
@@ -141,14 +165,29 @@ def imageintoGraph(path):
     
 
     for node in nodelist:
+        print(node.value)
         for node2 in nodelist:
             for connection in node2.connectedto:
                 if connection in node.connectedto and node2 != node:
                     # node.addnode(node2)
-                    node.addnode(node2.position)
+                    node.addnode(node2)
+
+   
+    for line in linecenter:
+        print(line)
+        for edgy in edgelist:
+            print(edgy.position)
+            x1 = edgy.position[0]-55
+            x2 = edgy.position[2]+55
+            y1 = edgy.position[1]+55
+            y2 = edgy.position[3]-55
+            if((line[0]>x1 and line[0]<x2) and (line[1]>y2 and line[1]<y1)):
+                print(True)
+                cv2.rectangle(planets,(x1,y1),(x2,y2),(255,128,64),3)
+       
                     
-    print(nodelist[0].position)
-    print(nodelist[0].connectedtonodes)
+    
+    # print(edgelist[0].value)
  
 
            
@@ -284,10 +323,11 @@ def drawconnectionlines(points,graph,offset,add,distances):
         nodeint+=1
 
 imageintoGraph(imagepath)
-floydWarshall(graph)
-distances = textintoGraph('dist.txt')
-points = GenerateCordsforNodes(randomCords(),points)
-drawnodes(nodes,points)
-drawconnectionlines(points,graph,0,False,distances)
-drawconnectionlines(points,distances,15,True,graph)
-done()
+
+# floydWarshall(graph)
+# distances = textintoGraph('dist.txt')
+# points = GenerateCordsforNodes(randomCords(),points)
+# drawnodes(nodes,points)
+# drawconnectionlines(points,graph,0,False,distances)
+# drawconnectionlines(points,distances,15,True,graph)
+# done()
