@@ -1,3 +1,4 @@
+from multiprocessing.connection import wait
 import this
 from turtle import *
 import random
@@ -5,9 +6,11 @@ import math
 from xml.dom.minicompat import NodeList
 import cv2
 from cv2 import line
+from cv2 import blur
 import numpy as np
 import os
 import re
+import time
 
 import easyocr
 
@@ -16,6 +19,7 @@ class Node:
         # declare and initialize an instance variable
     def __init__(self):
         self.connectedto = []
+        self.connectedtovalues = []
         self.connectedtonodes = []
     position= []
     size = []
@@ -27,6 +31,8 @@ class Node:
         self.connectedto.append(content)
     def addnode(self,node):
         self.connectedtonodes.append(node)
+    def addvalues(self,value):
+        self.connectedtovalues.append(value)
 
 class Edge:
     position= []
@@ -51,7 +57,7 @@ def detectlines(image):
     # threshold = 15  # minimum number of votes (intersections in Hough grid cell)
     threshold = 15
     min_line_length = 60  # minimum number of pixels making up a line
-    max_line_gap = 12  # maximum gap in pixels between connectable line segments
+    max_line_gap = 10  # maximum gap in pixels between connectable line segments
     line_image = np.copy(img) * 0  # creating a blank to draw lines on
     # Output "lines" is an array containing endpoints of detected line segments
     lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
@@ -62,12 +68,16 @@ def detectlines(image):
             cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
     img_erosion = cv2.erode(line_image, (kernel_size, kernel_size), iterations=1)
     edges = cv2.Canny(img_erosion, low_threshold, high_threshold)
-    # mask_image = np.copy(img) * 0
+    mask_image = np.copy(img) * 0
     contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    cv2.drawContours(mask_image, contours, -1, (0,255,0), 3)
+    cv2.imshow("HoughCirlces",	mask_image)
+    cv2.waitKey()
     return contours
 
 def imageintoGraph(path):
     # os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
+    # time.sleep(5)
     cords = [] # all detections
 
     nodelist = []
@@ -76,7 +86,7 @@ def imageintoGraph(path):
     reader = easyocr.Reader(['en'],gpu=True)
 
     linestopbot=[]
-    linecenter=[]
+
     lineedges = detectlines(prefix+path) # line Contours
     planets	= cv2.imread(prefix+path)
     original = planets.copy()
@@ -84,15 +94,7 @@ def imageintoGraph(path):
     img	= cv2.medianBlur(gray_img,	1)
     circles	= cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,30,param1=100,param2=30,minRadius=20,maxRadius=120)
     circles	= np.uint16(np.around(circles))
-   
-  
 
-
-
-    # reader = easyocr.Reader(['ch_sim','en']) # this needs to run only once to load the model into memory
-    # result = reader.readtext(prefix+path)
-    # print (result)
-    
     with open("alldetections.txt") as f:
         lines = f.readlines()
         for x in lines:
@@ -150,7 +152,6 @@ def imageintoGraph(path):
         cv2.circle(planets,(leftmost[0],leftmost[1]),4,(0,0,256),6)
         cv2.circle(planets,(int((rightmost[0]+leftmost[0])/2),int((rightmost[1]+leftmost[1])/2)),4,(128,64,0),6)
         linestopbot.append([leftmost[0],leftmost[1],rightmost[0],rightmost[1]])
-        linecenter.append(center)
 
     for line in linestopbot:
         
@@ -165,38 +166,80 @@ def imageintoGraph(path):
     
 
     for node in nodelist:
-        print(node.value)
         for node2 in nodelist:
             for connection in node2.connectedto:
                 if connection in node.connectedto and node2 != node:
                     # node.addnode(node2)
                     node.addnode(node2)
 
-   
-    for line in linecenter:
-        print(line)
-        for edgy in edgelist:
-            print(edgy.position)
-            x1 = edgy.position[0]-55
-            x2 = edgy.position[2]+55
-            y1 = edgy.position[1]+55
-            y2 = edgy.position[3]-55
-            if((line[0]>x1 and line[0]<x2) and (line[1]>y2 and line[1]<y1)):
-                print(True)
-                cv2.rectangle(planets,(x1,y1),(x2,y2),(255,128,64),3)
-       
-                    
+    for node in nodelist:
+        # print(node.value)
+        # print(node.connectedto)
+     
+        for line in linestopbot:
+            for edgy in edgelist:
+          
+                x1 = edgy.position[0]-50
+                x2 = edgy.position[2]+50
+                y1 = edgy.position[1]+50
+                y2 = edgy.position[3]-50
+                xlinecenter= int((line[0]+line[2])/2)
+                ylinecenter=  int((line[1]+line[3])/2)
+                if(((xlinecenter>x1 and xlinecenter<x2) and (ylinecenter>y2 and ylinecenter<y1)) and line in node.connectedto):
+                    # print(edgy.value)
+                    node.addvalues(edgy.value)
+                    cv2.rectangle(planets,(x1,y1),(x2,y2),(255,128,64),3)
     
-    # print(edgelist[0].value)
+    graph = [ [ 123 for y in range( len(nodelist)) ]
+             for x in range( len(nodelist)) ]
+    # print(len(graph))
  
 
-           
-            
-     
+    #Temp fix
+    nodevaluearr = []
+    for node in nodelist:
+        nodevaluearr.append(node.value)
 
-
-    # print(linestopbot)
-    # print(linecenter)
+  
+  
+    for x in range(len(nodelist)):
+        # print(len(nodelist[x].connectedtonodes[x])-1)
+        print(nodelist[x].value)
+        print("Connected",nodelist[x].connectedtovalues)
+        # print("NodeValue",nodelist[x].value)
+        # print("Connected",nodelist[x].connectedtonodes)
+        for y in range(len(nodelist[x].connectedtonodes)):
+            # print(nodelist[x].connectedtonodes[y].value)
+            # print(nodelist[x].connectedtovalues)
+            # print(y)
+            for z in range(len(nodevaluearr)):
+                if(nodelist[x].connectedtonodes[y].value == nodevaluearr[z]):
+                    # print(z)
+                    if(len(nodelist[x].connectedtovalues) < y):
+                        print("failed")
+                    else:
+                        nodelist[x].connectedtovalues[y]
+                        graph[x][z] = nodelist[x].connectedtovalues[y]
+                    # print(x)
+                   
+                  
+             
+          
+    print(nodevaluearr)
+  
+   
+    # graph[current][x] = xcon
+    for r in graph:
+        # print(r)
+        for c in r:
+            pass
+    
+    
+  
+    with open('paths.txt', 'w') as f:
+        for node in graph:
+            f.write(','.join(str(x) for x in node))
+            f.write('\n')
     cv2.imshow("HoughCirlces",	planets)
     cv2.waitKey()
     # cv2.destroyAllWindows()
@@ -216,7 +259,7 @@ def graphintoText(graph):
         for node in graph:
             f.write(','.join(str(x) for x in node))
             f.write('\n')
-graph = textintoGraph('graph.txt')
+graph = textintoGraph('paths.txt')
 nodes = len(graph)
 
 def floydWarshall(graph):
@@ -240,7 +283,7 @@ screen = Screen()
 screen.setup(WIDTH + 4, HEIGHT + 8)  # fudge factors due to window borders & title bar
 screen.setworldcoordinates(0, 0, WIDTH, HEIGHT)
 screen.colormode(255)
-speed(10)
+speed(2)
 points = []
 def randomCords():
     x=random.randint(40, WIDTH-40)
@@ -324,10 +367,10 @@ def drawconnectionlines(points,graph,offset,add,distances):
 
 imageintoGraph(imagepath)
 
-# floydWarshall(graph)
-# distances = textintoGraph('dist.txt')
-# points = GenerateCordsforNodes(randomCords(),points)
-# drawnodes(nodes,points)
-# drawconnectionlines(points,graph,0,False,distances)
+floydWarshall(graph)
+distances = textintoGraph('paths.txt')
+points = GenerateCordsforNodes(randomCords(),points)
+drawnodes(nodes,points)
+drawconnectionlines(points,graph,0,False,distances)
 # drawconnectionlines(points,distances,15,True,graph)
-# done()
+done()
