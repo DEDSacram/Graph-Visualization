@@ -34,7 +34,7 @@ class Edge:
 r = 30
 basedir = "data/images/"
 images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png","sus.png","garbage.jpeg"] # to be changed
-imagepath = basedir + "pog.png"
+imagepath = basedir + "pepeppo.png"
 def detectlines(image):
     img = cv2.imread(image)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -66,6 +66,7 @@ def imageintoGraph(path):
     # os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
     prefix = "../"
     cords = [] # all detections
+
     nodelist = []
     edgelist = []
 
@@ -130,11 +131,12 @@ def imageintoGraph(path):
     for line in linestopbot:
         
         for node in nodelist:
-            x1 = node.outercircle[0] - node.outercircle[2]-20
+            x1 = node.outercircle[0] - node.outercircle[2]-20   
             x2 = node.outercircle[0] + node.outercircle[2]+20
             y1 = node.outercircle[1] + node.outercircle[2]+20
-            y2 = node.outercircle[2] - node.outercircle[2]-20
+            y2 = node.outercircle[1] - node.outercircle[2]-20
             if(((line[0]>x1 and line[0]<x2) and (line[1]>y2 and line[1]<y1)) or ((line[2]>x1 and line[2]<x2) and (line[3]>y2 and line[3]<y1))):
+                cv2.rectangle(planets,(x1,y1),(x2,y2),(255,0,0),5)
                 node.add(line)
     
 
@@ -142,9 +144,12 @@ def imageintoGraph(path):
         for node2 in nodelist:
             for connection in node2.connectedto:
                 if connection in node.connectedto and node2 != node:
-                    node.addnode(node2)
+                    # node.addnode(node2)
+                    node.addnode(node2.position)
+                    
     print(nodelist[0].position)
     print(nodelist[0].connectedtonodes)
+ 
 
            
             
