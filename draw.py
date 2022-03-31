@@ -1,9 +1,7 @@
 from multiprocessing.connection import wait
-import this
 from turtle import *
 import random
 import math
-from xml.dom.minicompat import NodeList
 import cv2
 from cv2 import line
 from cv2 import blur
@@ -14,18 +12,17 @@ import time
 
 import easyocr
 
+
+##NEEDED CLASSES
 class Node:
-        #waypoint
-        # declare and initialize an instance variable
+       
     def __init__(self):
         self.connectedto = []
-        self.connectedtovalues = []
         self.connectedtonodes = []
         self.belongsto=[]
     position= []
     size = []
     outercircle = []
-    # connectedto = []
     value = ""
     def addvaluetoline(self,line):
         self.belongsto.append(line)
@@ -33,21 +30,26 @@ class Node:
         self.connectedto.append(content)
     def addnode(self,node):
         self.connectedtonodes.append(node)
-    def addvalues(self,value):
-        self.connectedtovalues.append(value)
 
 class Edge:
     position= []
     size = []
     value = ""
+##NEEDED CLASSES
 
 
+##circle diameter,base directory, available images in that directory, prefix from this directory to yolov5
 r = 30
 basedir = "data/images/"
 images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png","sus.png","garbage.jpeg"] # to be changed
-imagepath = basedir + "pog.png"
+imagepath = basedir + "pepeppo.png"
 prefix = "../"
+##circle diameter,base directory, available images in that directory, prefix from this directory to yolov5
+
+## Function to detect lines between nodes, so we know which edge value belongs to what
 def detectlines(image):
+
+    ## Reading from given imagepath, base configuration for canny and hough lines
     img = cv2.imread(image)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     kernel_size = 3
@@ -65,29 +67,47 @@ def detectlines(image):
     lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
                         min_line_length, max_line_gap)
 
+
+    ## Reading from given imagepath, base configuration for canny and hough lines
+
+    
+
+    ##Drawing detected lines on black background
     for line in lines:
         for x1,y1,x2,y2 in line:
             cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
+    cv2.imshow("HoughCirlces",	line_image)
+    cv2.waitKey()
+    ##Drawing detected lines on black background
+
+    # Found eroding the image useful
     img_erosion = cv2.erode(line_image, (kernel_size, kernel_size), iterations=1)
+
+    ##Prepairing lines on black background for detection of contours and returning them, drawing contours on another black background (not needed)
     edges = cv2.Canny(img_erosion, low_threshold, high_threshold)
     mask_image = np.copy(img) * 0
     contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cv2.drawContours(mask_image, contours, -1, (0,255,0), 3)
     cv2.imshow("HoughCirlces",	mask_image)
     cv2.waitKey()
+    ##Prepairing lines on black background for detection of contours and returning them, drawing contours on another black background (not needed)
     return contours
 
 def imageintoGraph(path):
+    ## RUNNING AI, time.sleep introduced for CUDA out of memory error
     os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
     time.sleep(5)
+    ## RUNNING AI, time.sleep introduced for CUDA out of memory error
+
+    ## Initializing arrays,OCR and prepairing image for detection of circles (nodes)
     cords = [] # all detections
 
-    nodelist = []
-    edgelist = []
+    nodelist = [] # Containing node classes
+    edgelist = [] # containing edge classes
 
     reader = easyocr.Reader(['en'],gpu=True)
 
-    linestopbot=[]
+    linestopbot=[] #
 
     lineedges = detectlines(prefix+path) # line Contours
     planets	= cv2.imread(prefix+path)
@@ -96,13 +116,19 @@ def imageintoGraph(path):
     img	= cv2.medianBlur(gray_img,	1)
     circles	= cv2.HoughCircles(img,cv2.HOUGH_GRADIENT,1,30,param1=100,param2=30,minRadius=20,maxRadius=120)
     circles	= np.uint16(np.around(circles))
+    ## Initializing arrays,OCR and prepairing image for detection of circles (nodes)
 
+
+    ## READING FROM AI OUTPUT
     with open("alldetections.txt") as f:
         lines = f.readlines()
         for x in lines:
             x = x.rstrip() 
             cords.append([int(float(i)) for i in x.split(',')])
-  
+    ## READING FROM AI OUTPUT
+
+
+    ## Going through all detected values by AI,If value is within the detected circle it is a node if not its an edge then reading values by of detected rectangle by OCR
     for cord in cords:
         node = Node()
         edge = Edge()
@@ -138,10 +164,12 @@ def imageintoGraph(path):
             edge.value = results[0][1]
             edgelist.append(edge)
             cv2.circle(planets,(centerx,centery),20,(0,0,255),3)
-    
+    ## Going through all detected values by AI,If value is within the detected circle it is a node if not its an edge then reading values by of detected rectangle by OCR
 
 
-    cv2.drawContours(planets, lineedges,-1, (0,255,0), 3)
+    cv2.drawContours(planets, lineedges,-1, (0,255,0), 3) # Not sure why I have this here
+
+    ## going through contours getting the closest 2 points of the line to node
     for crt in lineedges:
         leftmost = tuple(crt[crt[:,:,0].argmin()][0])
         rightmost = tuple(crt[crt[:,:,0].argmax()][0])
@@ -149,12 +177,13 @@ def imageintoGraph(path):
         # bottommost = tuple(crt[crt[:,:,1].argmax()][0])
         # cv2.circle(planets,(topmost[0],topmost[1]),10,(0,128,64),6)
         # cv2.circle(planets,(bottommost[0],bottommost[1]),10,(0,256,64),6)
-        center = [int((rightmost[0]+leftmost[0])/2),int((rightmost[1]+leftmost[1])/2)]
         cv2.circle(planets,(rightmost[0],rightmost[1]),4,(64,64,64),6)
         cv2.circle(planets,(leftmost[0],leftmost[1]),4,(0,0,256),6)
         cv2.circle(planets,(int((rightmost[0]+leftmost[0])/2),int((rightmost[1]+leftmost[1])/2)),4,(128,64,0),6)
         linestopbot.append([leftmost[0],leftmost[1],rightmost[0],rightmost[1]])
+    ## going through contours getting the closest 2 points of the line to node
 
+    ## closest point of line to node is or isnt within the given box
     for line in linestopbot:
         
         for node in nodelist:
@@ -166,22 +195,20 @@ def imageintoGraph(path):
                 cv2.rectangle(planets,(x1,y1),(x2,y2),(255,0,0),5)
                 node.add(line)
 
+    ## closest point of line to node is or isnt within the given box
+
+    ##adding connected node class to node class
     for node in nodelist:
         for node2 in nodelist:
             for connection in node2.connectedto:
                 if connection in node.connectedto and node2 != node:
-                    # node.addnode(node2)
                     node.addnode(node2)
+    ##adding connected node class to node class
 
-  
+    ## if edge value is within the given box created at middle of the line add value
     for node in nodelist:
-        # print(node.value)
-        # print(node.connectedto)
-       
-     
         for line in linestopbot:
             for edgy in edgelist:
-          
                 x1 = edgy.position[0]-50
                 x2 = edgy.position[2]+50
                 y1 = edgy.position[1]+50
@@ -189,27 +216,27 @@ def imageintoGraph(path):
                 xlinecenter= int((line[0]+line[2])/2)
                 ylinecenter=  int((line[1]+line[3])/2)
                 if(((xlinecenter>x1 and xlinecenter<x2) and (ylinecenter>y2 and ylinecenter<y1)) and line in node.connectedto):
-                    # print(edgy.value)
-                 
                     node.addvaluetoline([node.value,line,edgy.value])
-                    node.addvalues(edgy.value)
                     cv2.rectangle(planets,(x1,y1),(x2,y2),(255,128,64),3)
+     ## if edge value is within the given box created at middle of the line add value
 
  
 
     
-    
+    ## CREATING INFINITY GRAPH
     graph = [ [ 123 for y in range( len(nodelist)) ]
              for x in range( len(nodelist)) ]
-    # print(len(graph))
+    ## CREATING INFINITY GRAPH
  
 
-    #Temp fix
+    ## CHECKING ORDER OF NODES IN GRAPH
     nodevaluearr = []
     for node in nodelist:
-        # print("New",node.belongsto)
         nodevaluearr.append(node.value)
+    ## CHECKING ORDER OF NODES IN GRAPH
 
+
+    ## WHICH NODE IS CONNECTED TO WHICH INCLUDING VALUE OF EDGE BETWEEN THEM
     for x in range(len(nodelist)):
      
         print("New",nodelist[x].belongsto)
@@ -222,23 +249,22 @@ def imageintoGraph(path):
                                   graph[x][z] = i[2]
                                   
         print("Next")
-    print(nodevaluearr)
-    # graph[current][x] = xcon
-    for r in graph:
-        # print(r)
-        for c in r:
-            pass
+    ## WHICH NODE IS CONNECTED TO WHICH INCLUDING VALUE OF EDGE BETWEEN THEM
+    print(nodevaluearr)   
     
-    
-  
+    ## WRITING ALL VALUES TO TXT
     with open('paths.txt', 'w') as f:
         for node in graph:
             f.write(','.join(str(x) for x in node))
             f.write('\n')
+    ## WRITING ALL VALUES TO TXT
+
+    ## SHOWING ALL DETECTUONS
     cv2.imshow("HoughCirlces",	planets)
     cv2.waitKey()
-    # cv2.destroyAllWindows()
+    ## SHOWING ALL DETECTUONS
 
+#function to read txt and return graph with numeric values
 def textintoGraph(file):
     graph = []
     with open(file) as f:
@@ -249,6 +275,7 @@ def textintoGraph(file):
 
         return graph
 
+#function to write graph to txt file
 def graphintoText(graph):
     with open('dist.txt', 'w') as f:
         for node in graph:
@@ -257,6 +284,7 @@ def graphintoText(graph):
 graph = textintoGraph('paths.txt')
 nodes = len(graph)
 
+# function for floydWarshall
 def floydWarshall(graph):
     dist = list(map(lambda i: list(map(lambda j: j, i)), graph))
     for k in range(nodes):
@@ -273,6 +301,9 @@ def floydWarshall(graph):
                                  )
     graphintoText(dist)
     return dist
+
+
+## TURTLE DRAWING GRAPHS BASE VALUES + points
 WIDTH, HEIGHT = 1980, 1080
 screen = Screen()
 screen.setup(WIDTH + 4, HEIGHT + 8)  # fudge factors due to window borders & title bar
@@ -280,10 +311,15 @@ screen.setworldcoordinates(0, 0, WIDTH, HEIGHT)
 screen.colormode(255)
 speed(2)
 points = []
+## TURTLE DRAWING GRAPHS BASE VALUES + points
+
+#function to generate random chords within window so it doesnt touch
 def randomCords():
-    x=random.randint(40, WIDTH-40)
-    y=random.randint(40, HEIGHT-40)
+    x=random.randint(r, WIDTH-r)
+    y=random.randint(r, HEIGHT-r)
     return [x,y]
+
+#function to verify if chords are not generated at the same place
 def verify(cords,points):
     if not points:
         return True
@@ -292,6 +328,7 @@ def verify(cords,points):
         if cords[0] >= points[i][0]-200 and cords[0] >= points[i][0]+200 and cords[1] >= points[i][1]-200 and cords[1] >= points[i][1]+200:
             return False
     return True
+# function that includes randomCords() and verify() this function generates new random chords if verification doesnt go through
 def GenerateCordsforNodes(cords,points):
     i = 0
     while i <=nodes:
@@ -302,6 +339,7 @@ def GenerateCordsforNodes(cords,points):
             i-=1
         i+=1
     return points
+# function to graw nodes from points to canvas
 def drawnodes(nodes,points):
     for i in range(nodes):
         penup()
@@ -313,6 +351,7 @@ def drawnodes(nodes,points):
         pendown()
         circle(r)
 # PROBLEMS WHEN TOO CLOSE TO X,Y axis intersections of the circle. BECAUSE OF REVERSING SIDES LINE GOES THROUGH THE NODE 
+# Draw lines between drawn nodes on canvas
 def drawconnectionlines(points,graph,offset,add,distances):
     nodeint = 0
     i = 0
@@ -359,6 +398,7 @@ def drawconnectionlines(points,graph,offset,add,distances):
             i+=1
         i=0
         nodeint+=1
+
 
 imageintoGraph(imagepath)
 
