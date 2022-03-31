@@ -21,12 +21,14 @@ class Node:
         self.connectedto = []
         self.connectedtovalues = []
         self.connectedtonodes = []
+        self.belongsto=[]
     position= []
     size = []
     outercircle = []
     # connectedto = []
     value = ""
-
+    def addvaluetoline(self,line):
+        self.belongsto.append(line)
     def add(self,content):
         self.connectedto.append(content)
     def addnode(self,node):
@@ -156,14 +158,13 @@ def imageintoGraph(path):
     for line in linestopbot:
         
         for node in nodelist:
-            x1 = node.outercircle[0] - node.outercircle[2]-20   
-            x2 = node.outercircle[0] + node.outercircle[2]+20
-            y1 = node.outercircle[1] + node.outercircle[2]+20
-            y2 = node.outercircle[1] - node.outercircle[2]-20
+            x1 = node.outercircle[0] - node.outercircle[2]-30   
+            x2 = node.outercircle[0] + node.outercircle[2]+30
+            y1 = node.outercircle[1] + node.outercircle[2]+30
+            y2 = node.outercircle[1] - node.outercircle[2]-30
             if(((line[0]>x1 and line[0]<x2) and (line[1]>y2 and line[1]<y1)) or ((line[2]>x1 and line[2]<x2) and (line[3]>y2 and line[3]<y1))):
                 cv2.rectangle(planets,(x1,y1),(x2,y2),(255,0,0),5)
                 node.add(line)
-    
 
     for node in nodelist:
         for node2 in nodelist:
@@ -172,9 +173,11 @@ def imageintoGraph(path):
                     # node.addnode(node2)
                     node.addnode(node2)
 
+  
     for node in nodelist:
         # print(node.value)
         # print(node.connectedto)
+       
      
         for line in linestopbot:
             for edgy in edgelist:
@@ -187,8 +190,14 @@ def imageintoGraph(path):
                 ylinecenter=  int((line[1]+line[3])/2)
                 if(((xlinecenter>x1 and xlinecenter<x2) and (ylinecenter>y2 and ylinecenter<y1)) and line in node.connectedto):
                     # print(edgy.value)
+                 
+                    node.addvaluetoline([node.value,line,edgy.value])
                     node.addvalues(edgy.value)
                     cv2.rectangle(planets,(x1,y1),(x2,y2),(255,128,64),3)
+
+ 
+
+    
     
     graph = [ [ 123 for y in range( len(nodelist)) ]
              for x in range( len(nodelist)) ]
@@ -198,36 +207,22 @@ def imageintoGraph(path):
     #Temp fix
     nodevaluearr = []
     for node in nodelist:
+        # print("New",node.belongsto)
         nodevaluearr.append(node.value)
 
-  
-  
     for x in range(len(nodelist)):
-        # print(len(nodelist[x].connectedtonodes[x])-1)
-        print(nodelist[x].value)
-        print("Connected",nodelist[x].connectedtovalues)
-        # print("NodeValue",nodelist[x].value)
-        # print("Connected",nodelist[x].connectedtonodes)
-        for y in range(len(nodelist[x].connectedtonodes)):
-            # print(nodelist[x].connectedtonodes[y].value)
-            # print(nodelist[x].connectedtovalues)
-            # print(y)
-            for z in range(len(nodevaluearr)):
-                if(nodelist[x].connectedtonodes[y].value == nodevaluearr[z]):
-                    # print(z)
-                    if(len(nodelist[x].connectedtovalues) < y):
-                        print("failed")
-                    else:
-                        nodelist[x].connectedtovalues[y]
-                        graph[x][z] = nodelist[x].connectedtovalues[y]
-                    # print(x)
-                   
-                  
-             
-          
+     
+        print("New",nodelist[x].belongsto)
+        for u in nodelist[x].belongsto:
+                 for z in range(len(nodevaluearr)):
+                          for i in nodelist[z].belongsto:
+                              if(u[1] == i[1] and u[0]!=i[0]):
+                                  print(u[0],i[0],i[2])
+                                  print(x,z)
+                                  graph[x][z] = i[2]
+                                  
+        print("Next")
     print(nodevaluearr)
-  
-   
     # graph[current][x] = xcon
     for r in graph:
         # print(r)
