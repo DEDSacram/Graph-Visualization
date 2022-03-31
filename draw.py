@@ -15,7 +15,7 @@ import time
 import easyocr
 
 class Node:
-
+        #waypoint
         # declare and initialize an instance variable
     def __init__(self):
         self.connectedto = []
@@ -45,7 +45,7 @@ class Edge:
 r = 30
 basedir = "data/images/"
 images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png","sus.png","garbage.jpeg"] # to be changed
-imagepath = basedir + "pepeppo.png"
+imagepath = basedir + "pog.png"
 prefix = "../"
 def detectlines(image):
     img = cv2.imread(image)
@@ -78,8 +78,8 @@ def detectlines(image):
     return contours
 
 def imageintoGraph(path):
-    # os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
-    # time.sleep(5)
+    os.system(f"cd .. &&  python detect.py --weights runs/train/graphs/weights/last.pt --img 640 --conf 0.6 --source "+path+" --hide-labels")
+    time.sleep(5)
     cords = [] # all detections
 
     nodelist = []
