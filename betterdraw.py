@@ -41,55 +41,42 @@ class Edge:
 ##circle diameter,base directory, available images in that directory, prefix from this directory to yolov5
 r = 30
 basedir = "data/images/"
-images = ["Cool.png","pog.png","pepeppo.png","HAHAUDIETHANOSSNAP.png","sus.png","garbage.jpeg"] # to be changed
-imagepath = basedir + "blup.png"
+images = [] # to be changed
+imagepath = basedir + "graf.png"
 prefix = "../"
 ##circle diameter,base directory, available images in that directory, prefix from this directory to yolov5
 
 ## Function to detect lines between nodes, so we know which edge value belongs to what
-def detectlines(image):
+def detectlines(image,edge,circles):
 
     ## Reading from given imagepath, base configuration for canny and hough lines
     img = cv2.imread(image)
     gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    kernel_size = 3
-    low_threshold = 50
-    high_threshold = 150
-    edges = cv2.Canny(gray, low_threshold, high_threshold)
-    rho = 1  # distance resolution in pixels of the Hough grid
-    theta = np.pi / 180  # angular resolution in radians of the Hough grid
-    # threshold = 15  # minimum number of votes (intersections in Hough grid cell)
-    threshold = 15
-    min_line_length = 60  # minimum number of pixels making up a line
-    max_line_gap = 10  # maximum gap in pixels between connectable line segments
-    line_image = np.copy(img) * 0  # creating a blank to draw lines on
-    # Output "lines" is an array containing endpoints of detected line segments
-    lines = cv2.HoughLinesP(edges, rho, theta, threshold, np.array([]),
-                        min_line_length, max_line_gap)
+    kernel = np.ones((5,5),np.uint8)
+    (thresh, blackAndWhiteImage) = cv2.threshold(gray, 127, 255, cv2.THRESH_BINARY)
 
-
-    ## Reading from given imagepath, base configuration for canny and hough lines
-
+    img_not = cv2.bitwise_not(blackAndWhiteImage)
+    cv2.imshow("HoughCirlces",	img_not)
+    cv2.waitKey()
     
+    for i in circles[0]:
+         cv2.circle(img_not,(i[0],i[1]),i[2]+10,(0,0,0),-1)
+    for x in edge:
+        cv2.rectangle(img_not,(x.position[0],x.position[1]),(x.position[2],x.position[3]+5),(0,0,0),-1)
+        print(x.position)
 
-    ##Drawing detected lines on black background
-    for line in lines:
-        for x1,y1,x2,y2 in line:
-            cv2.line(line_image,(x1,y1),(x2,y2),(255,0,0),5)
-    cv2.imshow("HoughCirlces",	line_image)
+
+ 
+
+
+ 
+    dilation = cv2.dilate(img_not,kernel,iterations = 1)
+    cv2.imshow("HoughCirlces",	dilation)
     cv2.waitKey()
-    ##Drawing detected lines on black background
+ 
+    # edges = cv2.Canny(dilation, low_threshold, high_threshold)
 
-    # Found eroding the image useful
-    img_erosion = cv2.erode(line_image, (kernel_size, kernel_size), iterations=1)
-
-    ##Prepairing lines on black background for detection of contours and returning them, drawing contours on another black background (not needed)
-    edges = cv2.Canny(img_erosion, low_threshold, high_threshold)
-    mask_image = np.copy(img) * 0
-    contours, hierarchy = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    cv2.drawContours(mask_image, contours, -1, (0,255,0), 3)
-    cv2.imshow("HoughCirlces",	mask_image)
-    cv2.waitKey()
+    contours, hierarchy = cv2.findContours(dilation, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     ##Prepairing lines on black background for detection of contours and returning them, drawing contours on another black background (not needed)
     return contours
 
@@ -137,8 +124,8 @@ def imageintoGraph(path):
     for cord in cords:
         node = Node()
         edge = Edge()
-        width = (cord[2]-cord[0])
-        height = (cord[1]-cord[3])
+        width = abs(cord[2]-cord[0])
+        height = abs(cord[1]-cord[3])
         centerx = cord[0] + int(width/2)
         centery = cord[1] - int(height/2)
         isin = False
@@ -146,7 +133,7 @@ def imageintoGraph(path):
             if((math.pow((cord[0] - i[0]), 2) + math.pow((cord[1] - i[1]), 2)) < math.pow(i[2],2)):
                         isin = True
                         node.outercircle = [i[0],i[1],i[2]]
-            cv2.circle(planets,(i[0],i[1]),i[2],(0,128,64),6)
+          
 
       
      
@@ -158,7 +145,7 @@ def imageintoGraph(path):
             node.size = [width,height]
             node.value= results[0][1]
             nodelist.append(node)
-            cv2.circle(planets,(centerx,centery),20,(0,128,0),3)
+          
         else:
             crop_img = original[cord[1]+1:cord[3]+1, cord[0]+1:cord[2]+1]
             results = reader.recognize(crop_img)
@@ -168,12 +155,16 @@ def imageintoGraph(path):
             # edge.value = re.findall(r'\d+', results[0][1])
             edge.value = results[0][1]
             edgelist.append(edge)
-            cv2.circle(planets,(centerx,centery),20,(0,0,255),3)
+      
     ## Going through all detected values by AI,If value is within the detected circle it is a node if not its an edge then reading values by of detected rectangle by OCR
 
 
-    lineedges = detectlines(prefix+path) # line Contours
-    cv2.drawContours(planets, lineedges,-1, (0,255,0), 3) # Not sure why I have this here
+
+    lineedges = detectlines(prefix+path,edgelist,circles) # line Contours
+    # cv2.drawContours(planets, lineedges,-1, (0,255,0), 3) # Not sure why I have this here
+
+
+
 
     ## going through contours getting the closest 2 points of the line to node
     for crt in lineedges:
